@@ -1,0 +1,192 @@
+#----------------------------------------------------------------------------------------------------------
+# 1. docker-compose -p microservices-comp3095-assign -f docker-compose.yml up -d
+#    -This command will start the containers mode without rebuilding the images (if they exist)
+#
+# 2. docker-compose -p microservices-comp3095-ecommerce -f docker-compose.yml up -d -build
+#    -This command forces the rebuild of images, even if they already exist, before starting the containers.
+#----------------------------------------------------------------------------------------------------------
+
+
+services :
+
+  product-service :
+    image: product-service
+    ports:
+      - "8086:8086"
+    build:
+      context: ./product-service   # The directory where the Dockerfile resides
+      dockerfile: ./Dockerfile     # Specify the Dockerfile for use to build image
+    container_name: product-service
+    environment:
+      SPRING_PROFILES_ACTIVE : docker
+    depends_on:
+      - mongo
+    networks:
+      - spring
+
+  mongo:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      -  "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./data/mongo/products:/data/db
+      - ./init/mongo/docker-entrypoint-initdb.d/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    networks:
+      - spring
+
+  mongo-express :
+    image : mongo-express
+    ports :
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+      - ME_CONFIG_MONGODB_SERVICE=mongo
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:password@mongo:27017/
+    container_name: mongo-express
+    depends_on:
+      - mongo
+    networks :
+      - spring
+
+
+
+
+  postgres-order:
+    image : postgres
+    ports:
+      - "5432:5432"
+    container_name: postgres-order
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./data/order:/var/lib/postgresql/data
+      - ./init/postgres/order/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - spring
+
+  postgres-inventory:
+    image: postgres
+    ports:
+      - "5433:5432"
+    container_name: postgres-inventory
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./data/inventory:/var/lib/postgresql/data
+      - ./init/postgres/inventory/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - spring
+
+
+  pgadmin :
+    image: dpage/pgadmin4
+    ports:
+      - "8888:80"
+    container_name: pgadmin-3095
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=user@domain.ca
+      - PGADMIN_DEFAULT_PASSWORD=password
+    networks:
+      - spring
+
+
+  order-service:
+    image: order-service
+    build:
+      context: ./order-service
+      dockerfile: ./Dockerfile
+    ports:
+      - "9082:9082"
+    container_name: order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - postgres-order
+    networks:
+      - spring
+
+
+  inventory-service:
+    image: inventory-service
+    build:
+      context: ./inventory-service
+      dockerfile: ./Dockerfile
+    ports:
+      - "9084:9084"
+    container_name: inventory-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - postgres-inventory
+    networks:
+      - spring
+
+  keycloak:
+    container_name: keycloak
+    hostname: keycloak
+    image: quay.io/keycloak/keycloak:24.0.1
+    command: [ "start-dev","--import-realm" ]
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: postgres-keycloak
+      DB_DATABASE: keycloak
+      DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      ROOT_LOGLEVEL: DEBUG
+      JBOSS_LOG_MANAGER_ROOT_LOGGER: DEBUG, stdout, FILE
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./realms/:/opt/keycloak/data/import
+    depends_on:
+      - postgres-keycloak
+    networks:
+      - spring
+
+  postgres-keycloak:
+    image: postgres
+    ports:
+      - "5431:5432"
+    container_name: postgres-keycloak
+    environment:
+      - POSTGRES_DB= keycloak
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - PGDATA=/data/postgres
+    volumes:
+      - ./data/postgres/keycloak:/var/lib/postgresql/data
+    networks:
+      - spring
+
+  api-gateway:
+    image: api-gateway
+    build:
+      context: ./api-gateway
+      dockerfile: ./Dockerfile
+    ports:
+      - "9000:9000"
+    container_name: api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - postgres-keycloak
+    networks:
+      - spring
+
+
+
+volumes:
+  mongo:
+    driver : local
+
+networks:
+  spring:
+    driver : bridge

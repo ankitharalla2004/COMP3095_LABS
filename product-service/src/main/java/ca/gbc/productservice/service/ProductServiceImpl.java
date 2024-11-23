@@ -12,10 +12,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-/**
- * {@code @project} microservice-parent
- * @authorparam on
- **/
+
 
 @Service
 @Slf4j

@@ -34,7 +34,12 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:mongodb")
+    testImplementation("io.rest-assured:rest-assured")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-starter-webmvc-ui
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+// https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-starter-webmvc-api
+    testImplementation("org.springdoc:springdoc-openapi-starter-webmvc-api:2.6.0")
 }
 
 tasks.withType<Test> {
