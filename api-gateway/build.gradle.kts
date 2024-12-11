@@ -34,6 +34,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-security
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j:3.1.2")
+    compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
